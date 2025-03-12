@@ -73,7 +73,8 @@ class Actor(nn.Module):
         T.save(self.state_dict(), self.checkpoint_file)
 
     def load_checkpoint(self):
-        self.load_state_dict(T.load(self.checkpoint_file))
+        device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+        self.load_state_dict(T.load(self.checkpoint_file, map_location=device))
 
 class Critic(nn.Module):
     def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256,
@@ -104,7 +105,8 @@ class Critic(nn.Module):
         T.save(self.state_dict(), self.checkpoint_file)
 
     def load_checkpoint(self):
-        self.load_state_dict(T.load(self.checkpoint_file))
+        device = T.device('cuda' if T.cuda.is_available() else 'cpu')
+        self.load_state_dict(T.load(self.checkpoint_file, map_location=device))
 
 class Agent:
     def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
@@ -160,7 +162,6 @@ class Agent:
                     a_t += discount*(reward_arr[k] + self.gamma*values[k+1]*(1-int(dones_arr[k])) - values[k])
                     discount *= self.gamma*self.gae_lambda
                 advantage[t] = a_t
-                # advantage[t] = a_t + self.gamma*self.gae_lambda*(1-int(dones_arr[k]))*advantage[t]
             advantage = T.tensor(advantage).to(self.actor.device)
 
             values = T.tensor(values).to(self.actor.device)
@@ -176,7 +177,7 @@ class Agent:
 
                 new_probs = dist.log_prob(actions)
                 prob_ratio = new_probs.exp() / old_probs.exp()
-                #prob_ratio = (new_probs - old_probs).exp()
+
                 weighted_probs = advantage[batch] * prob_ratio
                 weighted_clipped_probs = T.clamp(prob_ratio, 1-self.policy_clip,
                         1+self.policy_clip)*advantage[batch]
