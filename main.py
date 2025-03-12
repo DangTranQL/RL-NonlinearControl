@@ -12,7 +12,7 @@ if __name__ == '__main__':
     agent = Agent(n_actions=env.action_space.n, batch_size=batch_size, 
                     alpha=alpha, n_epochs=n_epochs, 
                     input_dims=env.observation_space.shape)
-    n_games = 200
+    n_episodes = 200
 
     figure_file = 'plots/cartpole.png'
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     avg_score = 0
     n_steps = 0
 
-    for i in range(n_games):
+    for episode in range(n_episodes):
         observation, _ = env.reset()
         done = False
         score = 0
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             best_score = avg_score
             agent.save_models()
 
-        print('episode', i, 'score %.1f' % score, 'avg score %.1f' % avg_score,
+        print('episode', episode, 'score %.1f' % score, 'avg score %.1f' % avg_score,
                 'time_steps', n_steps, 'learning_steps', learn_iters)
     x = [i+1 for i in range(len(score_history))]
     plot_learning_curve(x, score_history, figure_file)
