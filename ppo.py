@@ -7,6 +7,18 @@ import time
 from torch.distributions.categorical import Categorical
 
 class PPOMemory:
+    """
+        Data batch generation and storage
+        
+        Attr:
+            states (array): State space
+            probs (array): Probabilities of actions
+            vals (array): Values after sequence of actions
+            actions (array): Action space
+            rewards (array): Rewards of actions
+            dones (array): Actions done
+    """
+    
     def __init__(self, batch_size):
         self.states = []
         self.probs = []
@@ -43,6 +55,16 @@ class PPOMemory:
         self.vals = []
 
 class Actor(nn.Module):
+    """ Policy-based model that maps state-action space to learn optimal policy
+    
+        Attr:
+            n_actions (int): Action space
+            input_dims (int): Observation space
+            alpha (float): Learning rate
+            fc1_dims (int): NN layer dimension
+            fc2_dim2 (int): NN layer dimension
+            chkpt_dir (string): Model's weights storage path        
+    """
     def __init__(self, n_actions, input_dims, alpha,
             fc1_dims=256, fc2_dims=256, chkpt_dir='model'):
         super(Actor, self).__init__()
@@ -77,6 +99,15 @@ class Actor(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file, map_location=device))
 
 class Critic(nn.Module):
+    """ Value-based model that performs action at a state given by Actor to get the corresponding reward
+    
+        Attr:
+            input_dims (int): Observation space
+            alpha (float): Learning rate
+            fc1_dims (int): NN layer dimension
+            fc2_dims (int): NN layer dimension
+            chkpt_dir (string): Model's weights storage path
+    """
     def __init__(self, input_dims, alpha, fc1_dims=256, fc2_dims=256,
             chkpt_dir='model'):
         super(Critic, self).__init__()
@@ -109,6 +140,20 @@ class Critic(nn.Module):
         self.load_state_dict(T.load(self.checkpoint_file, map_location=device))
 
 class Agent:
+    """ RL model-free off-policy model that combines policy-based Actor and value-based Critic
+    
+        Attr:
+            n_actions (int): Action space
+            input_dims (int): Observation space
+            gamma (float): Discount factor
+            alpha (float): Learning rate
+            gae_lambda (float): Advantage's variance and bias control
+            policy_clip (float): Policy update's deviation
+            batch_size (int): Batch size
+            n_epochs (int): Number of epochs for each episode
+            max_episode_time (int): Maximum time an epoch is allowed to train
+    """
+    
     def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
             policy_clip=0.2, batch_size=64, n_epochs=10, max_episode_time=300):
         self.gamma = gamma
@@ -135,6 +180,17 @@ class Agent:
         self.critic.load_checkpoint()
 
     def choose_action(self, observation):
+        """ Choose action based on observation
+
+        Args:
+            observation (tensor): Current observation
+
+        Returns:
+            action (tensor): Action at the current state
+            probs (tensor): Log probability of the action
+            value (tensor): Value after performing the action
+        """
+        
         state = T.tensor([observation], dtype=T.float).to(self.actor.device)
 
         dist = self.actor(state)
@@ -148,6 +204,10 @@ class Agent:
         return action, probs, value
 
     def learn(self):
+        """
+            Model's learning progress
+        """
+        
         for _ in range(self.n_epochs):
             start_time = time.time()
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
@@ -155,6 +215,9 @@ class Agent:
             values = vals_arr
             advantage = np.zeros(len(reward_arr), dtype=np.float32)
 
+            """ Compute advantage function
+                A_t = r(s_t) + gamma * gae_lambda * V(s_{t+1}) - V(s_t)
+            """
             for t in range(len(reward_arr)-1):
                 discount = 1
                 a_t = 0
@@ -172,9 +235,13 @@ class Agent:
 
                 dist = self.actor(states)
                 critic_value = self.critic(states)
-
                 critic_value = T.squeeze(critic_value)
 
+                """ Compute clipped surrogate objective
+                    r_t(theta) = pi_theta(a_t|s_t) / pi_old(a_t|s_t)
+                    L^CPI(theta) = r_t(theta) * A_t
+                    L^CLIP(theta) = min[E[L^CPI(theta), clip(r_t(theta), (1-clip, 1+clip)) * A_t]]
+                """
                 new_probs = dist.log_prob(actions)
                 prob_ratio = new_probs.exp() / old_probs.exp()
 
@@ -182,6 +249,10 @@ class Agent:
                 weighted_clipped_probs = T.clamp(prob_ratio, 1-self.policy_clip,
                         1+self.policy_clip)*advantage[batch]
                 actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
+                
+                """ Compute objective loss
+                    L^VF_t = (A_t + V_theta(s_t) - V^targ_t)^2
+                """
 
                 returns = advantage[batch] + values[batch]
                 critic_loss = (returns-critic_value)**2
