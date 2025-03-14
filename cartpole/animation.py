@@ -56,4 +56,6 @@ def update(frame):
 num_frames = 500
 anim = animation.FuncAnimation(fig, update, frames=num_frames, init_func=init, interval=90, blit=True)
 
+# anim.save('anim/cartpole_animation.gif', writer='imagemagick', fps=30)
+
 plt.show()
