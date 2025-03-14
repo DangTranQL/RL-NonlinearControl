@@ -9,8 +9,8 @@ env = gym.make('CartPole-v1')
 n_actions = env.action_space.n
 input_dims = env.observation_space.shape
 alpha = 0.0003
-batch_size = 64
-n_epochs = 10
+batch_size = 5
+n_epochs = 4
 
 agent = Agent(n_actions=n_actions, input_dims=input_dims, gamma=0.99, alpha=alpha,
               gae_lambda=0.95, policy_clip=0.2, batch_size=batch_size, n_epochs=n_epochs)
