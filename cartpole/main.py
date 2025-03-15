@@ -11,10 +11,10 @@ if __name__ == '__main__':
     alpha = 0.0003
     agent = Agent(n_actions=env.action_space.n, batch_size=batch_size, 
                     alpha=alpha, n_epochs=n_epochs, 
-                    input_dims=env.observation_space.shape)
-    n_episodes = 200
+                    input_dims=env.observation_space.shape, chkpt_dir="model_episode=2000")
+    n_episodes = 2000
 
-    figure_file = 'plots/cartpole.png'
+    figure_file = 'plots/model_episode=2000.png'
 
     best_score = env.reward_range[0]
     score_history = []

@@ -70,7 +70,8 @@ class Actor(nn.Module):
         super(Actor, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'actor')
-        os.makedirs(chkpt_dir, exist_ok=True)
+        if not os.path.exists(chkpt_dir):
+            os.makedirs(chkpt_dir)
         
         self.actor = nn.Sequential(
                 nn.Linear(*input_dims, fc1_dims),
@@ -113,7 +114,8 @@ class Critic(nn.Module):
         super(Critic, self).__init__()
 
         self.checkpoint_file = os.path.join(chkpt_dir, 'critic')
-        os.makedirs(chkpt_dir, exist_ok=True)
+        if not os.path.exists(chkpt_dir):
+            os.makedirs(chkpt_dir)
         
         self.critic = nn.Sequential(
                 nn.Linear(*input_dims, fc1_dims),
@@ -151,19 +153,18 @@ class Agent:
             policy_clip (float): Policy update's deviation
             batch_size (int): Batch size
             n_epochs (int): Number of epochs for each episode
-            max_episode_time (int): Maximum time an epoch is allowed to train
     """
     
     def __init__(self, n_actions, input_dims, gamma=0.99, alpha=0.0003, gae_lambda=0.95,
-            policy_clip=0.2, batch_size=64, n_epochs=10, max_episode_time=300):
+            policy_clip=0.2, batch_size=64, n_epochs=10, chkpt_dir="model"):
         self.gamma = gamma
         self.policy_clip = policy_clip
         self.n_epochs = n_epochs
         self.gae_lambda = gae_lambda
-        self.max_episode_time = max_episode_time
+        self.checkpoint_file = chkpt_dir
 
-        self.actor = Actor(n_actions, input_dims, alpha)
-        self.critic = Critic(input_dims, alpha)
+        self.actor = Actor(n_actions, input_dims, alpha, chkpt_dir=self.checkpoint_file)
+        self.critic = Critic(input_dims, alpha, chkpt_dir=self.checkpoint_file)
         self.memory = PPOMemory(batch_size)
        
     def remember(self, state, action, probs, vals, reward, done):
@@ -209,7 +210,6 @@ class Agent:
         """
         
         for _ in range(self.n_epochs):
-            start_time = time.time()
             state_arr, action_arr, old_prob_arr, vals_arr, reward_arr, dones_arr, batches = self.memory.generate_batches()
 
             values = vals_arr
@@ -264,13 +264,6 @@ class Agent:
                 total_loss.backward()
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
-            
-            elapsed_time = time.time() - start_time
-
-            if elapsed_time > self.max_episode_time:
-                print(f"Took {elapsed_time:.2f} seconds, exceeding the time limit of {self.max_episode_time} seconds.")
-                print("Stopping training.")
-                break
 
         self.memory.clear_memory()               
 
