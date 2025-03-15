@@ -14,8 +14,8 @@ agent = Agent(n_actions=n_actions, input_dims=input_dims, gamma=0.99, alpha=alph
               gae_lambda=0.95, policy_clip=0.2, batch_size=batch_size, n_epochs=n_epochs, chkpt_dir="model_episode=2000")
 agent.load_models()  
 
-observation, _ = env.reset(seed=3)
-observation[2] = 0.0
+observation, _ = env.reset()
+# observation[2] = 0.0
 
 angles = []
 
@@ -24,8 +24,8 @@ for _ in range(500):
     observation, _, terminated, truncated, info = env.step(action)
 
     if terminated or truncated:
-        observation, _ = env.reset(seed=3)
-        observation[2] = 0.0
+        observation, _ = env.reset()
+        # observation[2] = 0.0
 
     cart_pos, cart_vel, pole_angle, pole_vel = observation
     angles.append(pole_angle)
