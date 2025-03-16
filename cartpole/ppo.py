@@ -3,7 +3,6 @@ import numpy as np
 import torch as T
 import torch.nn as nn
 import torch.optim as optim
-import time
 from torch.distributions.categorical import Categorical
 
 class PPOMemory:
@@ -73,13 +72,26 @@ class Actor(nn.Module):
         if not os.path.exists(chkpt_dir):
             os.makedirs(chkpt_dir)
         
+        # self.actor = nn.Sequential(
+        #         nn.Linear(*input_dims, fc1_dims),
+        #         nn.ReLU(),
+        #         nn.Linear(fc1_dims, fc2_dims),
+        #         nn.ReLU(),
+        #         nn.Linear(fc2_dims, n_actions),
+        #         nn.Softmax(dim=-1)
+        # )
+
         self.actor = nn.Sequential(
-                nn.Linear(*input_dims, fc1_dims),
-                nn.ReLU(),
-                nn.Linear(fc1_dims, fc2_dims),
-                nn.ReLU(),
-                nn.Linear(fc2_dims, n_actions),
-                nn.Softmax(dim=-1)
+            nn.Linear(*input_dims, 16),
+            nn.ReLU(),
+            nn.Linear(16, 64),
+            nn.ReLU(),
+            nn.Linear(64, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, 16),
+            nn.ReLU(),
+            nn.Linear(16, n_actions),
+            nn.Softmax(dim=-1)
         )
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
@@ -117,12 +129,24 @@ class Critic(nn.Module):
         if not os.path.exists(chkpt_dir):
             os.makedirs(chkpt_dir)
         
+        # self.critic = nn.Sequential(
+        #         nn.Linear(*input_dims, fc1_dims),
+        #         nn.ReLU(),
+        #         nn.Linear(fc1_dims, fc2_dims),
+        #         nn.ReLU(),
+        #         nn.Linear(fc2_dims, 1)
+        # )
+
         self.critic = nn.Sequential(
-                nn.Linear(*input_dims, fc1_dims),
-                nn.ReLU(),
-                nn.Linear(fc1_dims, fc2_dims),
-                nn.ReLU(),
-                nn.Linear(fc2_dims, 1)
+            nn.Linear(*input_dims, 16),
+            nn.ReLU(),
+            nn.Linear(16, 64),
+            nn.ReLU(),
+            nn.Linear(64, fc1_dims),
+            nn.ReLU(),
+            nn.Linear(fc1_dims, 16),
+            nn.ReLU(),
+            nn.Linear(16, 1)
         )
 
         self.optimizer = optim.Adam(self.parameters(), lr=alpha)
@@ -266,4 +290,3 @@ class Agent:
                 self.critic.optimizer.step()
 
         self.memory.clear_memory()               
-
